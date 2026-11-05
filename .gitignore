@@ -1,0 +1,11 @@
+# Secrets
+.env
+credentials/
+
+# Local n8n data
+.n8n/
+*.sqlite
+
+# Temp files
+*.tmp
+.DS_Store
