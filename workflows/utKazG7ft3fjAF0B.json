@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-06T08:56:38.703Z",
+  "updatedAt": "2026-11-06T12:37:01.579Z",
   "createdAt": "2026-11-05T13:55:08.822Z",
   "id": "utKazG7ft3fjAF0B",
   "name": "CVE Monitor",
@@ -37,7 +37,7 @@
           "parameters": [
             {
               "name": "pubStartDate",
-              "value": "={{ $now.toUTC().minus({ days: 1 }).toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+              "value": "={{ $now.toUTC().minus({ hours: 2 }).toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
             },
             {
               "name": "pubEndDate",
@@ -93,6 +93,41 @@
       ],
       "id": "148cad20-0d34-4d86-a4fa-4c866a63dd44",
       "name": "Skip Already Seen"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Settings =====\nconst MAX_LENGTH = 1900;      // Discord allows 2000 characters per message\nconst MAX_DESCRIPTION = 180;  // keep each CVE short\nconst MAX_MESSAGES = 3;       // never flood the channel in a single run\n\nconst icon = s => (s === 'CRITICAL' ? '🔴' : '🟠');\nconst shorten = t => (t.length > MAX_DESCRIPTION ? t.slice(0, MAX_DESCRIPTION - 1) + '…' : t);\n\n// ===== Highest score first =====\nconst cves = $input.all()\n  .map(i => i.json)\n  .sort((a, b) => b.score - a.score);\n\n// ===== One block per CVE =====\nconst blocks = cves.map(c =>\n  `${icon(c.severity)} **[${c.id}](<${c.url}>)** · ${c.score} ${c.severity}\\n${shorten(c.description)}`\n);\n\n// ===== Pack blocks into messages under the Discord limit =====\nconst messages = [];\nlet current = { text: `**${cves.length} new HIGH/CRITICAL CVEs**\\n\\n`, count: 0 };\nfor (const block of blocks) {\n  if ((current.text + block).length > MAX_LENGTH) {\n    messages.push(current);\n    current = { text: '', count: 0 };\n  }\n  current.text += block + '\\n\\n';\n  current.count++;\n}\nif (current.count) messages.push(current);\n\n// ===== Cap the number of messages per run =====\nconst kept = messages.slice(0, MAX_MESSAGES);\nconst hidden = cves.length - kept.reduce((n, m) => n + m.count, 0);\nif (hidden > 0) {\n  kept[kept.length - 1].text += `…and ${hidden} more. Full list: <https://nvd.nist.gov/vuln/search>`;\n}\n\nreturn kept.map(m => ({ json: { content: m.text.trim() } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "4585a73a-727e-4700-8224-d4ef32487d76",
+      "name": "Build Message"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=     {{ $json.content }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "9be408d1-11e4-424c-b64f-98a4dded1fb2",
+      "name": "Send to Discord",
+      "webhookId": "cc0aea3b-3518-4bed-8f7d-7fdb04c53d56",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "iMZCEqix6tTTkjvG",
+          "name": "Discord CVE Alerts"
+        }
+      }
     }
   ],
   "connections": {
@@ -128,6 +163,28 @@
           }
         ]
       ]
+    },
+    "Skip Already Seen": {
+      "main": [
+        [
+          {
+            "node": "Build Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -135,11 +192,13 @@
     "binaryMode": "separate"
   },
   "staticData": null,
-  "meta": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "nodeGroups": [],
-  "versionId": "e01b5d65-4780-4c8c-b3a1-da3507a5246c",
+  "versionId": "0cd638ac-1783-4f26-863e-56c4c2fd29e4",
   "activeVersionId": null,
-  "versionCounter": 26,
+  "versionCounter": 39,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "tags": [],
