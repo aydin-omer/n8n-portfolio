@@ -1,0 +1,170 @@
+{
+  "updatedAt": "2026-11-06T08:56:38.703Z",
+  "createdAt": "2026-11-05T13:55:08.822Z",
+  "id": "utKazG7ft3fjAF0B",
+  "name": "CVE Monitor",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fd814178-9d61-452f-ad19-5b635f229c9a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pubStartDate",
+              "value": "={{ $now.toUTC().minus({ days: 1 }).toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            },
+            {
+              "name": "pubEndDate",
+              "value": "={{ $now.toUTC().toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            },
+            {
+              "name": "resultsPerPage",
+              "value": "2000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "76dfeb59-af5b-4b46-8679-94a494fda572",
+      "name": "Fetch NVD CVEs",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "xAP2QgbJiC9jYUx9",
+          "name": "NVD API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Settings =====\nconst MIN_SCORE = 7.0; // HIGH and CRITICAL only\n\n// ===== Helper: pick the newest CVSS version available =====\nconst pickMetric = (m = {}) =>\n  m.cvssMetricV40?.[0] ?? m.cvssMetricV31?.[0] ?? m.cvssMetricV30?.[0] ?? null;\n\n// ===== One clean item per relevant CVE =====\nconst vulns = $input.first().json.vulnerabilities ?? [];\n\nreturn vulns\n  .map(({ cve }) => {\n    const metric = pickMetric(cve.metrics);\n    return {\n      json: {\n        id: cve.id,\n        status: cve.vulnStatus,\n        published: cve.published,\n        score: metric?.cvssData?.baseScore ?? null,\n        severity: metric?.cvssData?.baseSeverity ?? 'UNKNOWN',\n        cvssVersion: metric?.cvssData?.version ?? null,\n        description: cve.descriptions?.find(d => d.lang === 'en')?.value ?? '',\n        url: `https://nvd.nist.gov/vuln/detail/${cve.id}`,\n      },\n    };\n  })\n  .filter(({ json }) =>\n    json.status !== 'Rejected' && json.score !== null && json.score >= MIN_SCORE\n  );"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "28b92c36-137d-4e31-9187-a8da05b3f9f8",
+      "name": "Parse & Filter"
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "148cad20-0d34-4d86-a4fa-4c866a63dd44",
+      "name": "Skip Already Seen"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch NVD CVEs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch NVD CVEs": {
+      "main": [
+        [
+          {
+            "node": "Parse & Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Filter": {
+      "main": [
+        [
+          {
+            "node": "Skip Already Seen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "versionId": "e01b5d65-4780-4c8c-b3a1-da3507a5246c",
+  "activeVersionId": null,
+  "versionCounter": 26,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-11-05T13:55:08.823Z",
+      "createdAt": "2026-11-05T13:55:08.823Z",
+      "role": "workflow:owner",
+      "workflowId": "utKazG7ft3fjAF0B",
+      "projectId": "f34keknJC49HCDqV",
+      "project": {
+        "updatedAt": "2026-11-05T13:52:15.413Z",
+        "createdAt": "2026-11-05T13:51:17.598Z",
+        "id": "f34keknJC49HCDqV",
+        "name": "OMER AYDIN <omer86aydin@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "07e21f8c-62e9-4e38-9756-9c1dd46e6336"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
