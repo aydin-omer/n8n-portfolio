@@ -5,7 +5,7 @@ services:
     container_name: n8n-portfolio
     restart: unless-stopped
     ports:
-      - "5679:5678"   # host port 5679 avoids conflicts with other local n8n instances
+      - "127.0.0.1:5679:5678"   # host port 5679 avoids conflicts with other local n8n instances
     env_file:
       - .env
     environment:
