@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-11-09T14:04:14.002Z",
+  "updatedAt": "2026-11-10T12:19:27.783Z",
   "createdAt": "2026-11-09T14:02:25.283Z",
   "id": "0WLBJdNPxMSMfhq3",
-  "name": "Check CISA KEV",
+  "name": "Tool:Check CISA KEV",
   "description": null,
-  "active": false,
+  "active": true,
   "isArchived": false,
   "nodes": [
     {
@@ -88,7 +88,7 @@
   "meta": null,
   "nodeGroups": [],
   "versionId": "cf27848e-c412-41c4-9e15-d7e977318c05",
-  "activeVersionId": null,
+  "activeVersionId": "cf27848e-c412-41c4-9e15-d7e977318c05",
   "versionCounter": 14,
   "triggerCount": 0,
   "sourceWorkflowId": null,
@@ -114,7 +114,7 @@
     }
   ],
   "versionMetadata": {
-    "name": null,
-    "description": null
+    "name": "v1.0",
+    "description": "Initial release: checks whether a CVE is in the CISA Known Exploited Vulnerabilities catalog."
   }
 }

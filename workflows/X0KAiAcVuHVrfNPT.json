@@ -4,7 +4,7 @@
   "id": "X0KAiAcVuHVrfNPT",
   "name": "Tool: Get EPSS Score",
   "description": null,
-  "active": false,
+  "active": true,
   "isArchived": false,
   "nodes": [
     {
@@ -97,7 +97,7 @@
   "meta": null,
   "nodeGroups": [],
   "versionId": "80d444df-bcd7-4490-b4ef-a21019371b6c",
-  "activeVersionId": null,
+  "activeVersionId": "80d444df-bcd7-4490-b4ef-a21019371b6c",
   "versionCounter": 22,
   "triggerCount": 0,
   "sourceWorkflowId": null,
@@ -123,7 +123,7 @@
     }
   ],
   "versionMetadata": {
-    "name": null,
-    "description": null
+    "name": "v1.0",
+    "description": "Initial release: returns the EPSS exploitation probability and percentile for a CVE."
   }
 }

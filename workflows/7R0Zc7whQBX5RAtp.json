@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-11-09T14:10:34.414Z",
+  "updatedAt": "2026-11-10T12:18:52.228Z",
   "createdAt": "2026-11-09T14:06:56.744Z",
   "id": "7R0Zc7whQBX5RAtp",
-  "name": "Get NVD Details",
+  "name": "Tool:Get NVD Details",
   "description": null,
-  "active": false,
+  "active": true,
   "isArchived": false,
   "nodes": [
     {
@@ -105,7 +105,7 @@
   "meta": null,
   "nodeGroups": [],
   "versionId": "3c0c8e2e-5520-459a-9849-dffa6e562eaf",
-  "activeVersionId": null,
+  "activeVersionId": "3c0c8e2e-5520-459a-9849-dffa6e562eaf",
   "versionCounter": 15,
   "triggerCount": 0,
   "sourceWorkflowId": null,
@@ -131,7 +131,7 @@
     }
   ],
   "versionMetadata": {
-    "name": null,
-    "description": null
+    "name": "v1.0",
+    "description": "Initial release: returns a compact NVD summary with CVSS, CWEs, affected products and key references."
   }
 }

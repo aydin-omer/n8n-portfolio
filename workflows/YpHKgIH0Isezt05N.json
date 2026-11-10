@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-11-10T11:57:55.477Z",
+  "updatedAt": "2026-11-10T12:18:22.821Z",
   "createdAt": "2026-11-10T10:41:32.112Z",
   "id": "YpHKgIH0Isezt05N",
-  "name": "Get OSV Packages",
+  "name": "Tool:Get OSV Packages",
   "description": null,
-  "active": false,
+  "active": true,
   "isArchived": false,
   "nodes": [
     {
@@ -208,7 +208,7 @@
   "meta": null,
   "nodeGroups": [],
   "versionId": "552cb4c9-fef1-4d44-b342-75056011fc8e",
-  "activeVersionId": null,
+  "activeVersionId": "552cb4c9-fef1-4d44-b342-75056011fc8e",
   "versionCounter": 30,
   "triggerCount": 0,
   "sourceWorkflowId": null,
@@ -234,7 +234,7 @@
     }
   ],
   "versionMetadata": {
-    "name": null,
-    "description": null
+    "name": "v1.0",
+    "description": "Initial release: lists affected open source packages and fixed versions from OSV.dev."
   }
 }
