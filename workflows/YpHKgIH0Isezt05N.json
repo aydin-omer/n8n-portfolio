@@ -1,0 +1,240 @@
+{
+  "updatedAt": "2026-11-10T11:57:55.477Z",
+  "createdAt": "2026-11-10T10:41:32.112Z",
+  "id": "YpHKgIH0Isezt05N",
+  "name": "Get OSV Packages",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "cveId"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ad5d729e-1b7f-40ed-a47d-efc6a2acd581",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.osv.dev/v1/vulns/{{ $json.cveId.trim().toUpperCase() }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "38fba051-09e8-4feb-9c08-ea7d8ad9fbf0",
+      "name": "Fetch OSV Record"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cveId = $('When Executed by Another Workflow').first().json.cveId.trim().toUpperCase();\nconst res = $input.first().json;\n\n// 404 means OSV has no record. Any other non-200 status is a real failure and should stop the workflow.\nif (res.statusCode === 404) {\n  return [{ json: { cveId, found: false, message: 'OSV has no record for this CVE.' } }];\n}\nif (res.statusCode !== 200) {\n  throw new Error(`OSV returned HTTP ${res.statusCode} for ${cveId}`);\n}\n\n// Package names and fixed versions live on ecosystem advisories (GHSA, PYSEC, GO, RUSTSEC...),\n// not on the CVE record itself\nconst aliases = (res.body.aliases ?? []).filter(id => !id.startsWith('CVE-')).slice(0, 4);\n\nif (aliases.length === 0) {\n  return [{\n    json: {\n      cveId,\n      found: true,\n      packageCount: 0,\n      affectedPackages: [],\n      message: 'OSV has this CVE but no linked package advisory. It probably affects software outside package registries, such as appliances or operating system components.',\n    },\n  }];\n}\n\nreturn aliases.map(aliasId => ({ json: { cveId, aliasId } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "80ce071a-5307-4eee-bb96-ce829b0e661c",
+      "name": "Extract Aliases"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "33a70ae4-40bf-4002-8334-dc83d5d52a68",
+              "leftValue": "={{ $json.aliasId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "7f8f97bf-ff8a-45c7-9fee-b5ab6e4c311a",
+      "name": "Has Aliases?"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.osv.dev/v1/vulns/{{ $json.aliasId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "53f607e0-5f3c-476a-96bd-140fd4523902",
+      "name": "Fetch Advisories",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cveId = $('When Executed by Another Workflow').first().json.cveId.trim().toUpperCase();\nconst packages = new Map();\n\nfor (const item of $input.all()) {\n  const advisory = item.json;\n  for (const affected of advisory.affected ?? []) {\n    if (!affected.package?.name) continue;\n\n    const key = `${affected.package.ecosystem}:${affected.package.name}`;\n    const entry = packages.get(key) ?? {\n      ecosystem: affected.package.ecosystem,\n      package: affected.package.name,\n      fixedVersions: new Set(),\n      advisories: new Set(),\n    };\n\n    (affected.ranges ?? [])\n      .flatMap(r => r.events ?? [])\n      .map(e => e.fixed)\n      .filter(Boolean)\n      .forEach(v => entry.fixedVersions.add(v));\n    entry.advisories.add(advisory.id);\n    packages.set(key, entry);\n  }\n}\n\nconst list = [...packages.values()].map(p => ({\n  ecosystem: p.ecosystem,\n  package: p.package,\n  fixedVersions: [...p.fixedVersions],\n  advisories: [...p.advisories],\n}));\n\nreturn [{\n  json: {\n    cveId,\n    found: true,\n    packageCount: list.length,\n    affectedPackages: list.slice(0, 10),\n    fixAvailable: list.some(p => p.fixedVersions.length > 0),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "e2ef1f46-ec0c-48a1-83a7-c1aca5a923ec",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        96
+      ],
+      "id": "6de34ca9-58c1-4761-83cc-e2912fd2fb80",
+      "name": "Return Without Packages"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Fetch OSV Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OSV Record": {
+      "main": [
+        [
+          {
+            "node": "Extract Aliases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Aliases": {
+      "main": [
+        [
+          {
+            "node": "Has Aliases?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Aliases?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Advisories",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Without Packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Advisories": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "versionId": "552cb4c9-fef1-4d44-b342-75056011fc8e",
+  "activeVersionId": null,
+  "versionCounter": 30,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-11-10T10:41:32.114Z",
+      "createdAt": "2026-11-10T10:41:32.114Z",
+      "role": "workflow:owner",
+      "workflowId": "YpHKgIH0Isezt05N",
+      "projectId": "f34keknJC49HCDqV",
+      "project": {
+        "updatedAt": "2026-11-05T13:52:15.413Z",
+        "createdAt": "2026-11-05T13:51:17.598Z",
+        "id": "f34keknJC49HCDqV",
+        "name": "OMER AYDIN <omer86aydin@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "07e21f8c-62e9-4e38-9756-9c1dd46e6336"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

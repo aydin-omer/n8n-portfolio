@@ -1,0 +1,129 @@
+{
+  "updatedAt": "2026-11-09T13:59:24.839Z",
+  "createdAt": "2026-11-09T13:54:19.161Z",
+  "id": "X0KAiAcVuHVrfNPT",
+  "name": "Tool: Get EPSS Score",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "cveId"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e76f559e-af58-4146-912f-0e9d532dea53",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "https://api.first.org/data/v1/epss",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "cve",
+              "value": "={{ $json.cveId.trim().toUpperCase() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f7a48991-3c77-4084-bb20-a938e4aa22df",
+      "name": "Fetch EPSS",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const cveId = $('When Executed by Another Workflow').first().json.cveId.trim().toUpperCase();\nconst row = $input.first().json.data?.[0];\n\n// No score is not an error: new CVEs often have no EPSS score yet\nif (!row) {\n  return [{ json: { cveId, found: false, message: 'No EPSS score published for this CVE yet.' } }];\n}\n\nconst epss = Number(row.epss);\n\nreturn [{\n  json: {\n    cveId,\n    found: true,\n    epss,                                           // 0-1 probability of exploitation in the next 30 days\n    epssPercent: Math.round(epss * 1000) / 10,      // same value as a readable percentage\n    percentile: Number(row.percentile),             // share of all CVEs with a lower score\n    scoreDate: row.date,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "4f7e6dc8-a908-4e00-8309-0993183539a0",
+      "name": "Format Result"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Fetch EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch EPSS": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "versionId": "80d444df-bcd7-4490-b4ef-a21019371b6c",
+  "activeVersionId": null,
+  "versionCounter": 22,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-11-09T13:54:19.164Z",
+      "createdAt": "2026-11-09T13:54:19.164Z",
+      "role": "workflow:owner",
+      "workflowId": "X0KAiAcVuHVrfNPT",
+      "projectId": "f34keknJC49HCDqV",
+      "project": {
+        "updatedAt": "2026-11-05T13:52:15.413Z",
+        "createdAt": "2026-11-05T13:51:17.598Z",
+        "id": "f34keknJC49HCDqV",
+        "name": "OMER AYDIN <omer86aydin@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "07e21f8c-62e9-4e38-9756-9c1dd46e6336"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

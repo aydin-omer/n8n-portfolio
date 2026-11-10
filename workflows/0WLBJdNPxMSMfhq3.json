@@ -1,0 +1,120 @@
+{
+  "updatedAt": "2026-11-09T14:04:14.002Z",
+  "createdAt": "2026-11-09T14:02:25.283Z",
+  "id": "0WLBJdNPxMSMfhq3",
+  "name": "Check CISA KEV",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "cveId"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ba110525-d6c5-4f60-9259-dddff8b56926",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "dd28b27e-4447-4e87-a769-dc00955d5763",
+      "name": "Fetch KEV Catalog",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const cveId = $('When Executed by Another Workflow').first().json.cveId.trim().toUpperCase();\nconst catalog = $input.first().json;\nconst entry = (catalog.vulnerabilities ?? []).find(v => v.cveID === cveId);\n\n// Absence from KEV is not proof of safety, so the message says exactly that\nif (!entry) {\n  return [{\n    json: {\n      cveId,\n      inKev: false,\n      catalogVersion: catalog.catalogVersion,\n      message: 'Not in the CISA KEV catalog. CISA has not confirmed exploitation in the wild, which does not prove it is not exploited.',\n    },\n  }];\n}\n\nreturn [{\n  json: {\n    cveId,\n    inKev: true,\n    vendor: entry.vendorProject,\n    product: entry.product,\n    name: entry.vulnerabilityName,\n    dateAdded: entry.dateAdded,\n    dueDate: entry.dueDate,\n    ransomwareUse: entry.knownRansomwareCampaignUse,   // \"Known\" or \"Unknown\"\n    requiredAction: entry.requiredAction,\n    catalogVersion: catalog.catalogVersion,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0b20ceee-184e-4eb4-b352-f5f37c399999",
+      "name": "Find CVE in Catalog"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Fetch KEV Catalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch KEV Catalog": {
+      "main": [
+        [
+          {
+            "node": "Find CVE in Catalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "versionId": "cf27848e-c412-41c4-9e15-d7e977318c05",
+  "activeVersionId": null,
+  "versionCounter": 14,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-11-09T14:02:25.285Z",
+      "createdAt": "2026-11-09T14:02:25.285Z",
+      "role": "workflow:owner",
+      "workflowId": "0WLBJdNPxMSMfhq3",
+      "projectId": "f34keknJC49HCDqV",
+      "project": {
+        "updatedAt": "2026-11-05T13:52:15.413Z",
+        "createdAt": "2026-11-05T13:51:17.598Z",
+        "id": "f34keknJC49HCDqV",
+        "name": "OMER AYDIN <omer86aydin@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "07e21f8c-62e9-4e38-9756-9c1dd46e6336"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
