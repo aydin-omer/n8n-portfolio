@@ -1,0 +1,120 @@
+{
+  "updatedAt": "2026-11-10T15:52:32.016Z",
+  "createdAt": "2026-11-10T15:51:17.776Z",
+  "id": "sJx3SvA6bQw81lkV",
+  "name": "Error Handler",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b4d0baed-aa66-4830-9aad-5190d4936816",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst workflowName = data.workflow?.name ?? 'unknown workflow';\nconst exec = data.execution ?? {};\n\n// If the trigger itself fails, n8n sends the error under \"trigger\" instead of \"execution\"\nconst error = exec.error ?? data.trigger?.error ?? {};\n\nconst message = [\n  `🔥 **Workflow failed: ${workflowName}**`,\n  `**Node:** ${exec.lastNodeExecuted ?? 'trigger'}`,\n  `**Error:** ${error.message ?? 'no error message'}`,\n  exec.url ? `<${exec.url}>` : '',\n]\n  .filter(Boolean)\n  .join('\\n')\n  .slice(0, 1900);\n\nreturn [{ json: { message } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d4546281-e3a9-4607-a9ba-2a3f77fc50f2",
+      "name": "Build Error Message"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b6f7cb8d-2dbd-48cc-b903-75d7a938ae4f",
+      "name": "Send Error Alert",
+      "webhookId": "806f9c3e-2162-4391-b48d-74a2824de85a",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "iMZCEqix6tTTkjvG",
+          "name": "Discord CVE Alerts"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Message": {
+      "main": [
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "versionId": "bc4321de-dfb7-4aed-843c-4e53322f84de",
+  "activeVersionId": "bc4321de-dfb7-4aed-843c-4e53322f84de",
+  "versionCounter": 9,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-11-10T15:51:17.778Z",
+      "createdAt": "2026-11-10T15:51:17.778Z",
+      "role": "workflow:owner",
+      "workflowId": "sJx3SvA6bQw81lkV",
+      "projectId": "f34keknJC49HCDqV",
+      "project": {
+        "updatedAt": "2026-11-05T13:52:15.413Z",
+        "createdAt": "2026-11-05T13:51:17.598Z",
+        "id": "f34keknJC49HCDqV",
+        "name": "OMER AYDIN <omer86aydin@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "07e21f8c-62e9-4e38-9756-9c1dd46e6336"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "v1.0",
+    "description": ""
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-06T12:37:01.579Z",
+  "updatedAt": "2026-11-10T15:54:53.324Z",
   "createdAt": "2026-11-05T13:55:08.822Z",
   "id": "utKazG7ft3fjAF0B",
   "name": "CVE Monitor",
@@ -189,7 +189,11 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "sJx3SvA6bQw81lkV",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
   "staticData": null,
   "meta": {
@@ -198,7 +202,7 @@
   "nodeGroups": [],
   "versionId": "0cd638ac-1783-4f26-863e-56c4c2fd29e4",
   "activeVersionId": null,
-  "versionCounter": 39,
+  "versionCounter": 40,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "tags": [],
