@@ -1,0 +1,381 @@
+{
+  "updatedAt": "2026-11-10T13:13:09.042Z",
+  "createdAt": "2026-11-10T12:27:35.400Z",
+  "id": "GSPcArveaZlyw1G4",
+  "name": "Vulnerability Triage Agent",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Vulnerability Triage",
+        "formDescription": "Enter a CVE ID to get a prioritized triage report.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "CVE ID",
+              "placeholder": "CVE-2021-44228",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ded6ddde-b2a7-4819-91e9-10b63236bc8f",
+      "name": "On form submission",
+      "webhookId": "3b14e60d-73ed-4c5d-956c-51882c975dae"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=  Triage {{ $json['CVE ID'].trim().toUpperCase() }}. How urgent is it and why?",
+        "options": {
+          "systemMessage": "You are a vulnerability triage analyst. Your job is to decide how urgently a CVE must be fixed and to explain why.\n\nProcess:\n1. Always call all four tools for the CVE: get_nvd_details, get_epss_score, check_cisa_kev and get_osv_packages.\n2. Base every statement only on what the tools returned. Never invent scores, dates, product names or versions. If a tool returned no data, say so.\n3. Assign exactly one priority using these rules, checking them from top to bottom:\n   - P1 (fix immediately): the CVE is in CISA KEV, or CVSS is 9.0 or higher and EPSS is 0.1 or higher.\n   - P2 (fix this week): EPSS is 0.1 or higher, or CVSS is 7.0 or higher and (EPSS is 0.01 or higher or NVD lists an exploit reference).\n   - P3 (fix in the normal patch cycle): CVSS is 7.0 or higher, or CVSS is 4.0 or higher and EPSS is 0.01 or higher. Also use P3 when both CVSS and EPSS are missing, and state that the data is insufficient.\n   - P4 (low): everything else.\n\nOutput:\nRespond with only one JSON object. No markdown, no code fences, no text before or after it. Use exactly these keys:\n{\n  \"priority\": \"P1, P2, P3 or P4\",\n  \"reason\": \"two or three sentences citing the deciding signals, quoting thresholds exactly as written in the rules\",\n  \"whatItIs\": \"one plain-language sentence about the flaw itself, never about urgency\",\n    \"affected\": [\"up to five entries. List OSV packages first as ecosystem:package, for example Maven:org.apache.logging.log4j:log4j-core, then NVD products only if slots remain\"],\n  \"fixedVersions\": [\"each entry as package name and version, for example log4j-core 2.15.0, or an empty list\"],\n  \"advisoryUrl\": \"one vendor advisory or patch link, or null\",\n  \"signals\": {\"cvssScore\": number or null, \"epss\": number or null, \"inKev\": true or false, \"hasExploitReference\": true or false},\n  \"dataGaps\": [\"names of tools that returned no data, or an empty list\"]\n}\nCopy the signal values exactly from the tool results."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "2a621c81-7c54-485a-8f67-8e3f92c24ac6",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "model": "mistral-small:24b",
+        "options": {
+          "temperature": 0.1,
+          "numCtx": 16384
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        96,
+        208
+      ],
+      "id": "9a327a73-cff6-4415-ba19-8eca28500d84",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "0nQgxMEiYefTQisZ",
+          "name": "Ollama (local)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Get the official NVD record for a CVE: description, CVSS score and severity, weakness types (CWE), affected products and key references such as exploits, patches and vendor advisories. Input: a CVE ID like CVE-2021-44228.",
+        "workflowId": {
+          "__rl": true,
+          "value": "7R0Zc7whQBX5RAtp",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/7R0Zc7whQBX5RAtp",
+          "cachedResultName": "Tool:Get NVD Details"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cveId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cveId', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "cveId"
+          ],
+          "schema": [
+            {
+              "id": "cveId",
+              "displayName": "cveId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        320
+      ],
+      "id": "d9044ade-790d-495a-a7e5-3d177e7ab0ce",
+      "name": "get_nvd_details"
+    },
+    {
+      "parameters": {
+        "description": "Get the EPSS score of a CVE: the probability (0 to 1) that it will be exploited in the wild in the next 30 days, and its percentile among all CVEs. Input: a CVE ID.",
+        "workflowId": {
+          "__rl": true,
+          "value": "X0KAiAcVuHVrfNPT",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/X0KAiAcVuHVrfNPT",
+          "cachedResultName": "Tool: Get EPSS Score"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cveId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cveId', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "cveId"
+          ],
+          "schema": [
+            {
+              "id": "cveId",
+              "displayName": "cveId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        480
+      ],
+      "id": "69971f89-3f0b-4757-985e-c148f27fd017",
+      "name": "get_epss_score"
+    },
+    {
+      "parameters": {
+        "description": "Check whether CISA has confirmed active exploitation of a CVE (Known Exploited Vulnerabilities catalog), including known ransomware use and the action CISA requires. Input: a CVE ID.",
+        "workflowId": {
+          "__rl": true,
+          "value": "0WLBJdNPxMSMfhq3",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/0WLBJdNPxMSMfhq3",
+          "cachedResultName": "Tool:Check CISA KEV"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cveId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cveId', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "cveId"
+          ],
+          "schema": [
+            {
+              "id": "cveId",
+              "displayName": "cveId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        496
+      ],
+      "id": "97455d33-3117-4939-a440-bb39a61a9db9",
+      "name": "check_cisa_kev"
+    },
+    {
+      "parameters": {
+        "description": "List the open source packages affected by a CVE (ecosystem and package name) and the versions that fix it, from OSV.dev. Usually returns no packages for commercial products or appliances. Input: a CVE ID.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YpHKgIH0Isezt05N",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YpHKgIH0Isezt05N",
+          "cachedResultName": "Tool:Get OSV Packages"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cveId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cveId', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "cveId"
+          ],
+          "schema": [
+            {
+              "id": "cveId",
+              "displayName": "cveId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        704,
+        480
+      ],
+      "id": "13be5866-c9b1-4817-9845-935a68f1964d",
+      "name": "get_osv_packages"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cveId = $('On form submission').first().json['CVE ID'].trim().toUpperCase();\nconst raw = String($input.first().json.output ?? '');\n\n// Local models sometimes wrap the JSON in code fences or add a sentence around it,\n// so we take everything between the first \"{\" and the last \"}\"\nconst start = raw.indexOf('{');\nconst end = raw.lastIndexOf('}');\nif (start === -1 || end <= start) {\n  throw new Error(`Agent did not return a JSON object for ${cveId}: ${raw.slice(0, 200)}`);\n}\n\nlet r;\ntry {\n  r = JSON.parse(raw.slice(start, end + 1));\n} catch (e) {\n  throw new Error(`Agent returned invalid JSON for ${cveId}: ${e.message}`);\n}\n\nif (!['P1', 'P2', 'P3', 'P4'].includes(r.priority)) {\n  throw new Error(`Invalid priority \"${r.priority}\" for ${cveId}`);\n}\n\n// Small type slips are repaired instead of failing the whole run\nconst toList = v => (Array.isArray(v) ? v.map(String) : v ? [String(v)] : []);\nconst toNumberOrNull = v =>\n  v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v);\nconst s = r.signals ?? {};\n\nreturn [{\n  json: {\n    cveId,                                   // from the form, never from the model\n    priority: r.priority,\n    reason: String(r.reason ?? ''),\n    whatItIs: String(r.whatItIs ?? ''),\n    affected: toList(r.affected).slice(0, 5),\n    fixedVersions: toList(r.fixedVersions),\n    advisoryUrl: r.advisoryUrl ? String(r.advisoryUrl) : null,\n    signals: {\n      cvssScore: toNumberOrNull(s.cvssScore),\n      epss: toNumberOrNull(s.epss),\n      inKev: s.inKev === true,\n      hasExploitReference: s.hasExploitReference === true,\n    },\n    dataGaps: toList(r.dataGaps),\n    triagedAt: new Date().toISOString(),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "8c41e441-5bee-4abb-a623-9620ecd41a7c",
+      "name": "Parse & Validate"
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_nvd_details": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_epss_score": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_cisa_kev": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_osv_packages": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse & Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "versionId": "c2e34f51-81b1-43ec-ba36-5489da7a8d88",
+  "activeVersionId": null,
+  "versionCounter": 74,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-11-10T12:27:35.402Z",
+      "createdAt": "2026-11-10T12:27:35.402Z",
+      "role": "workflow:owner",
+      "workflowId": "GSPcArveaZlyw1G4",
+      "projectId": "f34keknJC49HCDqV",
+      "project": {
+        "updatedAt": "2026-11-05T13:52:15.413Z",
+        "createdAt": "2026-11-05T13:51:17.598Z",
+        "id": "f34keknJC49HCDqV",
+        "name": "OMER AYDIN <omer86aydin@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "07e21f8c-62e9-4e38-9756-9c1dd46e6336"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
